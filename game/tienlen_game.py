@@ -6,12 +6,13 @@ class TienLenGame:
     def __init__(self):
         self.num_players = 4
         self.judger = TienLenJudger()
+        self.lowest_card = (3, 0) # 3 of Spades (rank 3, suit 0)
 
+        # RLCard Action Space Mapping
         self.actions = self.judger._generate_all_possible_combinations()
         self.num_actions = len(self.actions)
-        
-        self.action_to_id = {combo: i for i, combo in enumerate(self.actions)}
-        self.id_to_action = {i: combo for i, combo in enumerate(self.actions)}
+        self.action_to_id = {tuple(sorted(c)) if c else None: i for i, c in enumerate(self.actions)}
+        self.id_to_action = {i: c for i, c in enumerate(self.actions)}
 
     def get_num_players(self):
         return self.num_players
