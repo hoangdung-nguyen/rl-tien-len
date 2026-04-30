@@ -62,7 +62,6 @@ class TienLenJudger:
         power_rank = cards[-1] # Highest card defines the strength
         
         n = len(cards)
-        if n == 1: return "SINGLE", power_rank
         if self.is_same_rank(cards): return "SAME", power_rank
         if self.is_run(cards): return "RUN", power_rank
         if power_rank[0] == 15: return "PIG", power_rank
@@ -86,8 +85,6 @@ class TienLenJudger:
             valid_combos = self._get_combos_containing(hand, lowest)
         elif state == "NONE":
             valid_combos = self._get_all_types(hand)
-        elif state == "SINGLE":
-            valid_combos = [[card] for card in hand]
         elif state == "SAME":
             valid_combos = self._get_sames(hand, last_move)
         elif state == "RUN":

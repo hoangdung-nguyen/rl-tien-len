@@ -13,6 +13,7 @@ class TienLenGame:
         self.num_actions = 1442
         #self.action_to_id = {tuple(sorted(c)) if c else None: i for i, c in enumerate(self.actions)}
         #self.id_to_action = {i: c for i, c in enumerate(self.actions)}
+        self.initial_payoffs = [0] * self.num_players
 
     def get_num_players(self):
         return self.num_players
@@ -22,7 +23,7 @@ class TienLenGame:
 
     def is_over(self):
         """Check if every player has run out of cards."""
-        return sum(self.players_in_game) == 1
+        return sum(self.players_in_game) == 3
 
     def get_player_id(self):
         """ Return the current player's ID (0, 1, 2, or 3) """
@@ -58,6 +59,10 @@ class TienLenGame:
         else:
             self.current_stack.extend(list(action_cards))
             self.state, _ = self.judger.get_type(action_cards)
+
+            # if self.state == "HANG":
+                
+
             for card in action_cards:
                 player.hand.remove(card)
 
@@ -70,6 +75,9 @@ class TienLenGame:
             if not player.hand:
                 self.players_in_game[self.last_player] = False
                 self.players_in_play[self.last_player] = False
+
+                for idx, player in enumerate(self.players_in_game):
+                    if not player: self.initial_payoffs[idx] += 1
 
         # Check if everyone passed except one person
         if sum(self.players_in_play) <= 1:

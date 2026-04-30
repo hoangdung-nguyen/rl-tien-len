@@ -14,30 +14,6 @@ class TienLenEnv(Env):
         self.action_shape = [None for _ in range(self.num_players)]
 
     def _extract_state(self, state):
-        obs = np.zeros(104, dtype=int)
-        for rank, suit in state['hand']:
-            obs[(rank-3)*4 + suit] = 1
-        
-        # RLCard agents expect legal_actions to be a dict or list of ints
-        legal_actions = state['legal_actions']
-        
-        return {
-            'obs': obs,
-            'legal_actions': {action: None for action in legal_actions}, # Dict for some agents
-            'raw_legal_actions': legal_actions # For reference
-        }
-
-    def _decode_action(self, action_id):
-        return action_id # Map back to game logic cards
-
-    def get_payoffs(self):
-        # Simplified: +1 for first player with empty hand
-        return np.array([1.0 if not p.hand else -0.33 for p in self.game.players])
-
-
-
-
-    def _extract_state(self, state):
         """
         Turns the game state into numerical vectors for the NN.
         Returns:
@@ -87,26 +63,12 @@ class TienLenEnv(Env):
         }
 
     def step(self, action):
-        """
-        In Option 2, 'action' is the actual card tuple (e.g., ((3,0), (3,1)))
-        """
         next_state, player_id = self.game.step(action)
         return self._extract_state(next_state), player_id
 
     def get_payoffs(self):
-        """
-        Mirroring your Java logic: +1 for winner, -1 for losers.
-        You can add 'thuiHeo' (pig penalty) here by checking ranks.
-        """
-        payoffs = []
-        for p in self.game.players:
-            if not p.hand:
-                payoffs.append(1.0)  # Winner
-            else:
-                # Basic penalty
-                reward = -1.0
-                # Java 'thuiHeo' penalty: extra -0.5 if holding a 2 (rank 15)
-                if any(card[0] == 15 for card in p.hand):
-                    reward -= 0.5
-                payoffs.append(reward)
+        payoffs = self.game.initial_payoffs
+        for idx, p in enumerate(self.game.players):
+            if p.hand and any(card[0] == 15 for card in p.hand):
+                payoffs[idx] -= 0.5
         return np.array(payoffs)
