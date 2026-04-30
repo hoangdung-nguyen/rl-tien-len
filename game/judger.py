@@ -2,7 +2,6 @@ import itertools
 
 class TienLenJudger:
     def __init__(self):
-        self.action_space = self._generate_all_possible_combinations()
         pass
 
     def _generate_all_possible_combinations(self):
@@ -12,6 +11,7 @@ class TienLenJudger:
         all_cards = [(r, s) for r in ranks for s in suits]
         return self.get_all_combinations(all_cards)
 
+    @staticmethod
     def get_all_combinations(self, hand):
         """
         Generates every valid combination (Single, Pair, Triple, Run, Hang) from a hand.
@@ -119,7 +119,7 @@ class TienLenJudger:
         """
         legal_actions = [0] if last_move is not None else []
         
-        all_hand_combos = self.find_all_combos_in_hand(player.hand)
+        all_hand_combos = self.get_all_combinations(player.hand)
         
         for combo in all_hand_combos:
             if last_move is None:
@@ -138,8 +138,8 @@ class TienLenJudger:
         move: list of (rank, suit) chosen by agent
         target_move: list of (rank, suit) currently on top of the stack
         """
-        m_type, m_power = self.get_combination_type(move)
-        t_type, t_power = self.get_combination_type(target_move)
+        m_type, m_power = self.get_type(move)
+        t_type, t_power = self.get_type(target_move)
 
         if m_type == "INVALID": return False
         
