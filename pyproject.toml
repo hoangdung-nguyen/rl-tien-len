@@ -9,6 +9,7 @@ dependencies = [
     "torch",
     "torchvision",
     "torchaudio",
+    "ipykernel>=7.2.0",
 ]
 
 [[tool.uv.index]]
