@@ -5,11 +5,17 @@ class TienLenGame:
 
     def __init__(self):
         self.num_players = 4
-        # For now, let's say 53 actions: 52 cards + 1 pass
-        # You'll likely increase this later for combos
-        self.num_actions = 53 
         self.judger = TienLenJudger()
+
+        self.actions = self.judger.generate_all_possible_combinations()
+        self.num_actions = len(self.actions)
         
+        self.action_to_id = {combo: i for i, combo in enumerate(self.actions)}
+        self.id_to_action = {i: combo for i, combo in enumerate(self.actions)}
+
+    def get_num_actions(self):
+        return self.num_actions
+
     def get_num_players(self):
         return self.num_players
 
@@ -19,9 +25,9 @@ class TienLenGame:
     def is_over(self):
         """Check if any player has run out of cards."""
         for player in self.players:
-            if len(player.hand) == 0:
-                return True
-        return False
+            if len(player.hand) != 0:
+                return False
+        return True
 
     def get_player_id(self):
         """ Return the current player's ID (0, 1, 2, or 3) """
