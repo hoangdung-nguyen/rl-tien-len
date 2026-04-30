@@ -63,22 +63,18 @@ class TienLenJudger:
         
         n = len(cards)
         if n == 1: return "SINGLE", power_rank
-        if self.is_same_rank(cards):
-            if n == 2: return "PAIR", power_rank
-            if n == 3: return "TRIPLE", power_rank
-            if n == 4: return "FOUR_OF_A_KIND", power_rank # A "Bomb"
+        if self.is_same_rank(cards): return "SAME", power_rank
         if self.is_run(cards): return "RUN", power_rank
+        if power_rank[0] == 15: return "PIG", power_rank
         if self.is_hang(cards): return "HANG", power_rank # Pairs-of-sequences
         
         return "INVALID", 0
 
-    def get_legal_actions(self, player, last_move, state, action_to_id, is_first, lowest):
+    def get_legal_actions(self, player, last_move, state, is_first, lowest):
         """
         Args:
             player (TienLenPlayer): The player object whose turn it is
             last_move (list): The list of cards currently on the table (None if new round)
-            action_to_id (dict): The mapping to convert combinations to IDs
-
         Returns:
             legal_actions (list): A list of integer IDs (e.g., [0, 15, 42])
         """
@@ -88,30 +84,29 @@ class TienLenJudger:
         if is_first:
             # Java: getMovesThatContains(lowest)
             valid_combos = self._get_combos_containing(hand, lowest)
-        elif state == "none":
-            # Java: getMoves(hand, moves) -> All types
+        elif state == "NONE":
             valid_combos = self._get_all_types(hand)
-        elif state == "same":
-            # Java: getSames(hand, moves, peek)
+        elif state == "SINGLE":
+            valid_combos = [[card] for card in hand]
+        elif state == "SAME":
             valid_combos = self._get_sames(hand, last_move)
-        elif state == "run":
-            # Java: getRuns(hand, moves, peek)
+        elif state == "RUN":
             valid_combos = self._get_runs(hand, last_move)
-        elif state == "pig":
+        elif state == "PIG":
             # Java: getPigs(hand, moves, peek)
             valid_combos = self._get_pigs(hand, last_move)
-        elif state == "hang":
+        elif state == "HANG":
             # Java: getHang(hand, moves, peek)
             valid_combos = self._get_hangs(hand, last_move)
 
         # Map to IDs
-        legal_ids = [action_to_id[tuple(sorted(c))] for c in valid_combos if tuple(sorted(c)) in action_to_id]
+        legal_actions = [tuple(sorted(c)) for c in valid_combos]
 
-        # Add 'Pass' (0) if not a new round
-        if state != "none" and not is_first:
-            legal_ids.append(0)
+        # Add 'Pass' (empty tuple) if not a new round
+        if state != "NONE" and not is_first:
+            legal_actions.append(())
 
-        return list(set(legal_ids))
+        return list(set(legal_actions))
 
     @staticmethod
     def _get_rank_groups(hand):
@@ -192,34 +187,11 @@ class TienLenJudger:
     def _get_all_types(self, hand):
         """ All valid moves for a new trick """
         all_combos = []
-
         all_combos.extend(self._get_all_sames(hand))
-
         all_combos.extend(self._get_runs(hand))
-
         all_combos.extend(self._get_hangs(hand))
         return all_combos
 
     def _get_combos_containing(self, hand, card):
         """ Force play of 3s on first turn """
         return [m for m in self._get_all_types(hand) if card in m]
-
-    def can_beat(self, move, target_move):
-        """
-        move: list of (rank, suit) chosen by agent
-        target_move: list of (rank, suit) currently on top of the stack
-        """
-        m_type, m_power = self.get_type(move)
-        t_type, t_power = self.get_type(target_move)
-
-        if m_type == "INVALID": return False
-        
-        if m_type == t_type and len(move) == len(target_move):
-            return m_power > t_power
-
-        if (m_type == "FOUR_OF_A_KIND" or (m_type == "HANG" and len(move)>6)) and t_type == "PAIR" and t_power[0] == 15:
-            return True
-        if (m_type == "FOUR_OF_A_KIND" or m_type == "HANG") and t_type == "SINGLE" and t_power[0] == 15:
-            return True
-            
-        return False

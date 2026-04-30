@@ -1,4 +1,4 @@
-class TienLenPlayer(Player):
-    def __init__(self, player_id, np_random):
-        super().__init__(player_id, np_random)
+class TienLenPlayer:
+    def __init__(self, player_id):
+        self.player_id = player_id
         self.hand = []
