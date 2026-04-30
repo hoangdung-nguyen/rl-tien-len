@@ -13,21 +13,6 @@ class TienLenGame:
         self.num_actions = 1442
         #self.action_to_id = {tuple(sorted(c)) if c else None: i for i, c in enumerate(self.actions)}
         #self.id_to_action = {i: c for i, c in enumerate(self.actions)}
-        self.initial_payoffs = [0] * self.num_players
-
-    def get_num_players(self):
-        return self.num_players
-
-    def get_num_actions(self):
-        return self.num_actions
-
-    def is_over(self):
-        """Check if every player has run out of cards."""
-        return sum(self.players_in_game) == 3
-
-    def get_player_id(self):
-        """ Return the current player's ID (0, 1, 2, or 3) """
-        return self.current_player
 
     def init_game(self):
         self.dealer = TienLenDealer()
@@ -41,6 +26,7 @@ class TienLenGame:
         self.state = "NONE"
         self.is_first_round = True
         self.last_player = None
+        self.initial_payoffs = [0] * self.num_players
 
         self.current_player = 0
         for i, p in enumerate(self.players):
@@ -57,11 +43,12 @@ class TienLenGame:
         if action_cards is None: # This is a "Pass" (ID 0)
             self.players_in_play[self.current_player] = False
         else:
-            self.current_stack.extend(list(action_cards))
             self.state, _ = self.judger.get_type(action_cards)
 
-            # if self.state == "HANG":
-                
+            if self.state == "HANG":
+                self._play_hang()
+
+            self.current_stack.append(list(action_cards))
 
             for card in action_cards:
                 player.hand.remove(card)
@@ -114,3 +101,41 @@ class TienLenGame:
             'legal_actions': legal_actions,
             'player_id': player_id
         }
+
+    def _play_hang(self):
+        if len(self.current_stack) < 2:
+            return
+
+        the_gotten = []
+        temp_stack = list(self.current_stack)
+
+        while temp_stack:
+            move = temp_stack.pop()
+            the_gotten.append(move)
+            if len(move) <= 3:
+                break
+
+        multiplier = len(the_gotten)
+
+        if len(the_gotten) >= 2:
+            target_move = the_gotten[-1]
+            card = target_move[0 if len(target_move)==1 else -1]
+            rank, suit = card
+            penalty = (suit + 1) * multiplier
+
+            self.initial_payoffs[self.last_player] -= penalty
+            self.initial_payoffs[self.current_player] += penalty
+
+    def get_num_players(self):
+        return self.num_players
+
+    def get_num_actions(self):
+        return self.num_actions
+
+    def is_over(self):
+        """Check if every player has run out of cards."""
+        return any(len(p.hand) == 0 for p in self.players)
+
+    def get_player_id(self):
+        """ Return the current player's ID (0, 1, 2, or 3) """
+        return self.current_player
