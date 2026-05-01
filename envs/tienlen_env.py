@@ -15,8 +15,8 @@ class TienLenEnv(Env):
 
     def _get_one_action_feature(self, move, current_hand, current_state):
         """
-        Creates a 72-dim feature vector for a specific move.
-        72 dims = 52 (cards) + 8 (types) + 12 (heuristic/future metrics)
+        Creates a 67-dim feature vector for a specific move.
+        67 dims = 52 (cards) + 8 (types) + 12 (heuristic/future metrics)
         """
         feature = np.zeros(67, dtype=np.float32)
         m_type = "NONE"
@@ -57,33 +57,39 @@ class TienLenEnv(Env):
                 if card in future_hand:
                     future_hand.remove(card)
 
-        # 3. HEURISTIC METRICS (59-71) - Inspired by your Java evaluateMove
-        # Future Mobility: How many moves possible after this one?
+        # 3. HEURISTIC METRICS (59-71)
         future_moves = self.game.judger._get_all_types(future_hand)
-        feature[60] = len(future_moves) / 50.0  # Normalize roughly
 
-        # Future Hand size (Shedding progress)
-        feature[61] = len(future_hand) / 13.0
+        # 60. Future Mobility: Normalized via x / (x + 20)
+        m_count = len(future_moves)
+        feature[60] = m_count / (m_count + 20.0)
 
-        # Future Rank Strength (Sum of ranks / size)
+        # 61. Progress: Normalized 0 to 1
+        feature[61] = (13 - len(future_hand)) / 13.0
+
+        # 62. Hand Strength: Normalized (Max rank is 15)
         if future_hand:
-            feature[62] = (sum(c[0] for c in future_hand) / len(future_hand)) / 15.0
+            avg_rank = sum(c[0] for c in future_hand) / len(future_hand)
+            feature[62] = avg_rank / 15.0
 
-        # Same-State potential (Mobility specifically for the current round type)
-        # Mirroring: getValidMoves(hand, sameStateMoves, moveState, movePlayed)
-        if move != ():
+        # 63. Same-State Response: Normalized via x / (x + 5)
+        if move:
             res_moves = self.game.judger.get_legal_actions(future_hand, move, m_type, False, (3, 0))
-            feature[63] = len(res_moves) / 20.0
+            res_count = len(res_moves)
+            feature[63] = res_count / (res_count + 5.0)
 
-        # High-Value Card Tracking (How many 2s or Bombs are left in hand?)
-        feature[64] = sum(1 for c in future_hand if c[0] == 15) / 4.0
+        # 64. Cutting Action: Binary (0 or 1)
+        is_bomb = (n == 4 and self.game.judger.is_same_rank(move)) or m_type == "HANG"
+        if is_bomb and current_state in ["PIG", "SAME"]:
+            feature[64] = 1.0
 
-        # "Cutting" Potential: Is this move a Hang/Bomb played on a Pig/Same?
-        if m_type in ["FOUR_OF_A_KIND", "HANG"] and current_state in ["PIG", "SAME"]:
-            feature[65] = 1.0  # This action is a "Cut"
+        # 65. Stack Multiplier: Normalized (Assuming max 5-layer cut chain)
+        feature[65] = min(len(self.game.current_stack) / 5.0, 1.0)
 
+        # 66. Mobility Quality: Normalized (Max size is usually 4 or 5)
         if future_moves:
-            feature[66] = sum(len(m) for m in future_moves) / (len(future_moves) * 4.0)
+            avg_size = sum(len(m) for m in future_moves) / len(future_moves)
+            feature[66] = min(avg_size / 4.0, 1.0)
 
         return feature
 
