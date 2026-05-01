@@ -1,8 +1,8 @@
 from .dealer import TienLenDealer
 from .judger import TienLenJudger
 from .player import TienLenPlayer
-class TienLenGame:
 
+class TienLenGame:
     def __init__(self):
         self.num_players = 4
         self.judger = TienLenJudger()

@@ -6,8 +6,8 @@ from rlcard.envs.registration import register
 from envs.tienlen_env import TienLenEnv
 
 # 1. Register and Make Env
-register(env_id='tien-len-v1', entry_point=TienLenEnv)
-env = rlcard.make('tien-len-v1')
+register(env_id='tien-len', entry_point=TienLenEnv)
+env = rlcard.make('tien-len')
 
 # 2. Initialize DMC Agents
 agents = []
