@@ -16,7 +16,7 @@ class TienLenEnv(Env):
     def _get_one_action_feature(self, move, current_hand, current_state):
         """
         Creates a 67-dim feature vector for a specific move.
-        67 dims = 52 (cards) + 8 (types) + 12 (heuristic/future metrics)
+        67 dims = 52 (cards) + 8 (types) + 7 (heuristic/future metrics)
         """
         feature = np.zeros(67, dtype=np.float32)
         m_type = "NONE"
@@ -32,25 +32,21 @@ class TienLenEnv(Env):
             m_type, m_power = self.game.judger.get_type(move)
             n = len(move)
 
-            # 1. Map the 'SAME' type into specific bits based on count
             if m_type == "SAME":
                 if n == 1:
-                    # If rank is 15, it's a PIG, else it's a SINGLE
-                    feature[52 if m_power[0] != 15 else 59] = 1
+                    feature[52] = 1
                 elif n == 2:
                     feature[53] = 1  # PAIR
                 elif n == 3:
                     feature[54] = 1  # TRIPLE
                 elif n == 4:
                     feature[55] = 1  # FOUR_OF_A_KIND / BOMB
-
-            # 2. Map the others
             elif m_type == "RUN":
                 feature[56] = 1
             elif m_type == "HANG":
                 feature[57] = 1
             elif m_type == "PIG":
-                feature[59] = 1  # Explicit Pig Bit
+                feature[59] = 1
 
             future_hand = list(current_hand)
             for card in move:
@@ -79,12 +75,12 @@ class TienLenEnv(Env):
             feature[63] = res_count / (res_count + 5.0)
 
         # 64. Cutting Action: Binary (0 or 1)
-        is_bomb = (n == 4 and self.game.judger.is_same_rank(move)) or m_type == "HANG"
+        is_bomb = (len(move) == 4 and self.game.judger.is_same_rank(move)) or m_type == "HANG"
         if is_bomb and current_state in ["PIG", "SAME"]:
-            feature[64] = 1.0
+            feature[65] = 1.0
 
-        # 65. Stack Multiplier: Normalized (Assuming max 5-layer cut chain)
-        feature[65] = min(len(self.game.current_stack) / 5.0, 1.0)
+        # 65. Prioritize 2's
+        feature[65] = sum(1 for c in future_hand if c[0] == 15) / 4.0
 
         # 66. Mobility Quality: Normalized (Max size is usually 4 or 5)
         if future_moves:
@@ -113,23 +109,19 @@ class TienLenEnv(Env):
             for r, s in state['current_stack'][-1]:
                 obs[52 + (r - 3) * 4 + s] = 1
 
-        # Bits 104-155: Discard Pile (History - Optional but helpful)
-        # You can track this in TienLenGame to help the agent "count cards"
+        # Bits 104-155: Discard Pile
             for h in state['current_stack']:
                 for r, s in h:
                     obs[104 + (r - 3) * 4 + s] = 1
 
-        # Bits 156-158: Opponent Hand Sizes (Normalized)
-        # Helps the agent know if someone is about to win
+        # Bits 156-158: Opponent Hand Sizes
         other_counts = [len(p.hand) / 13.0 for i, p in enumerate(self.game.players) if i != state['player_id']]
         obs[156:159] = other_counts
 
 
         # 2. Build Action Features
-        # Every legal move becomes a 52-bit vector
-        legal_actions = state['legal_actions']  # This is a list of card tuples
+        legal_actions = state['legal_actions']
         action_features = {}
-
         for move in legal_actions:
             action_features[move] = self._get_one_action_feature(move, state['hand'], state['state'])
 

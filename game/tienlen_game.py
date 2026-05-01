@@ -19,7 +19,6 @@ class TienLenGame:
         self.players = [TienLenPlayer(i) for i in range(self.num_players)]
         self.dealer.deal_cards(self.players)
 
-        # Java-conformant state tracking
         self.current_stack = []
         self.players_in_play = [True] * self.num_players
         self.players_in_game = [True] * self.num_players

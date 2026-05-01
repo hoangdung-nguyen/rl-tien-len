@@ -11,7 +11,7 @@ class TienLenJudger:
 
         all_combos = self._get_all_types(all_cards)
 
-        unique_actions = [None] # ID 0 is 'Pass'
+        unique_actions = [()]
         seen = set()
         for combo in all_combos:
             c_tuple = tuple(sorted(combo))
@@ -37,10 +37,7 @@ class TienLenJudger:
 
     @staticmethod
     def is_hang(cards):
-        """ 
-        Checks for 'Pairs-of-Sequences' (Double Runs).
-        Matches Java logic for pairsOf.size() >= 3 and pairsOf.get(rank) == 2
-        """
+        """ Checks for 'Pairs-of-Sequences' (Double Runs). """
         if len(cards) < 6 or len(cards) % 2 != 0: return False
         ranks = sorted([c[0] for c in cards])
         # Ensure every rank has exactly a pair
@@ -53,15 +50,11 @@ class TienLenJudger:
         return all(unique_ranks[i] == unique_ranks[0] + i for i in range(len(unique_ranks)))
 
     def get_type(self, cards):
-        """ 
-        Matches your Java 'getMoveState'.
-        Returns a string type and the 'power rank' (highest card in combo)
-        """
+        """ Returns a string type and the 'power rank' (highest card in combo) """
         if not cards: return "NONE", 0
         cards = sorted(cards, key=lambda x: (x[0], x[1])) # Sort by rank then suit
         power_rank = cards[-1] # Highest card defines the strength
-        
-        n = len(cards)
+
         if self.is_same_rank(cards): return "SAME", power_rank
         if self.is_run(cards): return "RUN", power_rank
         if power_rank[0] == 15: return "PIG", power_rank
@@ -72,15 +65,14 @@ class TienLenJudger:
     def get_legal_actions(self, hand, last_move, state, is_first, lowest):
         """
         Args:
-            player (TienLenPlayer): The player object whose turn it is
-            last_move (list): The list of cards currently on the table (None if new round)
+            hand: The hand from which the move must be built
+            last_move (list): The list of cards currently on the table
         Returns:
-            legal_actions (list): A list of integer IDs (e.g., [0, 15, 42])
+            legal_actions (list): A list of tuples (e.g., [(3, 0), (4, 3), (5, 1)])
         """
         valid_combos = []
 
         if is_first:
-            # Java: getMovesThatContains(lowest)
             valid_combos = self._get_combos_containing(hand, lowest)
         elif state == "NONE":
             valid_combos = self._get_all_types(hand)
@@ -89,13 +81,10 @@ class TienLenJudger:
         elif state == "RUN":
             valid_combos = self._get_runs(hand, last_move)
         elif state == "PIG":
-            # Java: getPigs(hand, moves, peek)
             valid_combos = self._get_pigs(hand, last_move)
         elif state == "HANG":
-            # Java: getHang(hand, moves, peek)
             valid_combos = self._get_hangs(hand, last_move)
 
-        # Map to IDs
         legal_actions = [tuple(sorted(c)) for c in valid_combos]
 
         # Add 'Pass' (empty tuple) if not a new round
@@ -112,7 +101,7 @@ class TienLenJudger:
         return groups
 
     def _get_sames(self, hand, peek):
-        """ Java: getSames - Find Pairs/Triples/Quads of same length but higher power """
+        """ Find Pairs/Triples/Quads of same length but higher power """
         n, peek_power = len(peek), peek[-1]
         valid, groups = [], self._get_rank_groups(hand)
         for r, cards in groups.items():
@@ -133,6 +122,7 @@ class TienLenJudger:
         return valid
 
     def _get_runs(self, hand, peek=None):
+        """ Finds runs of the same length but higher power """
         target_len = len(peek) if peek else 3
         peek_power = peek[-1] if peek else (0, 0)
         valid, groups = [], self._get_rank_groups(hand)
