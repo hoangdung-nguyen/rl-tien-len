@@ -13,21 +13,78 @@ class TienLenEnv(Env):
         self.state_shape = [[159] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
 
-    def _get_one_action_feature(self, move):
-        """Helper to create the 60-dim feature for any move."""
-        feature = np.zeros(60, dtype=np.float32)
-        if not move:  # PASS
+    def _get_one_action_feature(self, move, current_hand, current_state):
+        """
+        Creates a 72-dim feature vector for a specific move.
+        72 dims = 52 (cards) + 8 (types) + 12 (heuristic/future metrics)
+        """
+        feature = np.zeros(67, dtype=np.float32)
+        m_type = "NONE"
+        # 1. Card Bitmap (0-51) & Pass Bit (58)
+        if move == ():
             feature[58] = 1  # Pass bit
+            future_hand = current_hand  # Hand doesn't change
         else:
             for r, s in move:
                 feature[(r - 3) * 4 + s] = 1
-            # Add type bits to help the LSTM/Dense layers
-            m_type, _ = self.game.judger.get_type(move)
-            type_map = {"SINGLE": 52, "PAIR": 53, "SAME": 53,  # Grouping SAME/PAIR
-                        "TRIPLE": 54, "FOUR_OF_A_KIND": 55,
-                        "RUN": 56, "HANG": 57}
-            if m_type in type_map:
-                feature[type_map[m_type]] = 1
+
+            # 2. Type Bits (52-57)
+            m_type, m_power = self.game.judger.get_type(move)
+            n = len(move)
+
+            # 1. Map the 'SAME' type into specific bits based on count
+            if m_type == "SAME":
+                if n == 1:
+                    # If rank is 15, it's a PIG, else it's a SINGLE
+                    feature[52 if m_power[0] != 15 else 59] = 1
+                elif n == 2:
+                    feature[53] = 1  # PAIR
+                elif n == 3:
+                    feature[54] = 1  # TRIPLE
+                elif n == 4:
+                    feature[55] = 1  # FOUR_OF_A_KIND / BOMB
+
+            # 2. Map the others
+            elif m_type == "RUN":
+                feature[56] = 1
+            elif m_type == "HANG":
+                feature[57] = 1
+            elif m_type == "PIG":
+                feature[59] = 1  # Explicit Pig Bit
+
+            future_hand = list(current_hand)
+            for card in move:
+                if card in future_hand:
+                    future_hand.remove(card)
+
+        # 3. HEURISTIC METRICS (59-71) - Inspired by your Java evaluateMove
+        # Future Mobility: How many moves possible after this one?
+        future_moves = self.game.judger._get_all_types(future_hand)
+        feature[60] = len(future_moves) / 50.0  # Normalize roughly
+
+        # Future Hand size (Shedding progress)
+        feature[61] = len(future_hand) / 13.0
+
+        # Future Rank Strength (Sum of ranks / size)
+        if future_hand:
+            feature[62] = (sum(c[0] for c in future_hand) / len(future_hand)) / 15.0
+
+        # Same-State potential (Mobility specifically for the current round type)
+        # Mirroring: getValidMoves(hand, sameStateMoves, moveState, movePlayed)
+        if move != ():
+            res_moves = self.game.judger.get_legal_actions(future_hand, move, m_type, False, (3, 0))
+            feature[63] = len(res_moves) / 20.0
+
+        # High-Value Card Tracking (How many 2s or Bombs are left in hand?)
+        feature[64] = sum(1 for c in future_hand if c[0] == 15) / 4.0
+
+        # "Cutting" Potential: Is this move a Hang/Bomb played on a Pig/Same?
+        if m_type in ["FOUR_OF_A_KIND", "HANG"] and current_state in ["PIG", "SAME"]:
+            feature[65] = 1.0  # This action is a "Cut"
+
+        if future_moves:
+            feature[66] = sum(len(m) for m in future_moves) / (len(future_moves) * 4.0)
+
         return feature
 
     def _extract_state(self, state):
@@ -61,18 +118,18 @@ class TienLenEnv(Env):
         other_counts = [len(p.hand) / 13.0 for i, p in enumerate(self.game.players) if i != state['player_id']]
         obs[156:159] = other_counts
 
-        
+
         # 2. Build Action Features
         # Every legal move becomes a 52-bit vector
         legal_actions = state['legal_actions']  # This is a list of card tuples
         action_features = {}
 
         for move in legal_actions:
-            action_features[move] = self._get_one_action_feature(move)
+            action_features[move] = self._get_one_action_feature(move, state['hand'], state['state'])
 
         return {
             'obs': obs,
-            'legal_actions': action_features,  # Move (tuple) -> 52-bit vector
+            'legal_actions': action_features,
             'raw_obs': state,
             'raw_legal_actions': legal_actions
         }

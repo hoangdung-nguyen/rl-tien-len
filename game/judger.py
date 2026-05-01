@@ -69,7 +69,7 @@ class TienLenJudger:
         
         return "INVALID", 0
 
-    def get_legal_actions(self, player, last_move, state, is_first, lowest):
+    def get_legal_actions(self, hand, last_move, state, is_first, lowest):
         """
         Args:
             player (TienLenPlayer): The player object whose turn it is
@@ -78,7 +78,6 @@ class TienLenJudger:
             legal_actions (list): A list of integer IDs (e.g., [0, 15, 42])
         """
         valid_combos = []
-        hand = sorted(player.hand)
 
         if is_first:
             # Java: getMovesThatContains(lowest)

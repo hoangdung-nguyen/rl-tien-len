@@ -85,7 +85,7 @@ class TienLenGame:
         player = self.players[player_id]
 
         legal_actions = self.judger.get_legal_actions(
-            player,
+            player.hand,
             self.last_move,
             self.state,
             self.is_first_round,
