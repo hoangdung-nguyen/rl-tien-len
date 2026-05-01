@@ -13,11 +13,21 @@ class TienLenEnv(Env):
         self.state_shape = [[159] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
 
-    def get_action_feature(self, action):
-        feature = np.zeros(52, dtype=np.float32)
-        if action:  # not pass
-            for r, s in action:
+    def _get_one_action_feature(self, move):
+        """Helper to create the 60-dim feature for any move."""
+        feature = np.zeros(60, dtype=np.float32)
+        if not move:  # PASS
+            feature[58] = 1  # Pass bit
+        else:
+            for r, s in move:
                 feature[(r - 3) * 4 + s] = 1
+            # Add type bits to help the LSTM/Dense layers
+            m_type, _ = self.game.judger.get_type(move)
+            type_map = {"SINGLE": 52, "PAIR": 53, "SAME": 53,  # Grouping SAME/PAIR
+                        "TRIPLE": 54, "FOUR_OF_A_KIND": 55,
+                        "RUN": 56, "HANG": 57}
+            if m_type in type_map:
+                feature[type_map[m_type]] = 1
         return feature
 
     def _extract_state(self, state):
@@ -51,16 +61,14 @@ class TienLenEnv(Env):
         other_counts = [len(p.hand) / 13.0 for i, p in enumerate(self.game.players) if i != state['player_id']]
         obs[156:159] = other_counts
 
+        
         # 2. Build Action Features
         # Every legal move becomes a 52-bit vector
         legal_actions = state['legal_actions']  # This is a list of card tuples
         action_features = {}
 
         for move in legal_actions:
-            feature = np.zeros(52, dtype=np.float32)
-            for r, s in move:
-                feature[(r - 3) * 4 + s] = 1
-            action_features[move] = feature
+            action_features[move] = self._get_one_action_feature(move)
 
         return {
             'obs': obs,
