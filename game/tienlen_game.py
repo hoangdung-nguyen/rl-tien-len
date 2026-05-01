@@ -25,6 +25,7 @@ class TienLenGame:
         self.players_in_game = [True] * self.num_players
         self.state = "NONE"
         self.is_first_round = True
+        self.last_move = None
         self.last_player = None
         self.initial_payoffs = [0] * self.num_players
 
@@ -55,7 +56,7 @@ class TienLenGame:
 
             self.is_first_round = False
 
-            self.latest_move = list(action_cards)
+            self.last_move = list(action_cards)
             self.last_player = self.current_player
 
             # Check if last player won
@@ -69,7 +70,6 @@ class TienLenGame:
         # Check if everyone passed except one person
         if sum(self.players_in_play) <= 1:
             # Round reset: the winner of the trick gets to start a new round
-            self.last_move = None
             self.state = "NONE"
             self.players_in_play = self.players_in_game.copy()
             self.current_player = self.last_player
