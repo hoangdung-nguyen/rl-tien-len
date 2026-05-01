@@ -13,6 +13,13 @@ class TienLenEnv(Env):
         self.state_shape = [[159] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
 
+    def get_action_feature(self, action):
+        feature = np.zeros(52, dtype=np.float32)
+        if action:  # not pass
+            for r, s in action:
+                feature[(r - 3) * 4 + s] = 1
+        return feature
+
     def _extract_state(self, state):
         """
         Turns the game state into numerical vectors for the NN.
