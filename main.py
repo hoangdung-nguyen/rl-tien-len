@@ -1,4 +1,3 @@
-#%%
 import os
 import torch
 import rlcard
@@ -10,18 +9,18 @@ from rlcard.agents.dmc_agent.model import DMCAgent
 from rlcard.utils import tournament
 import math
 import random
-#%%
+
 register(env_id='tien-len', entry_point='envs.tienlen_env:TienLenEnv')
 env = rlcard.make('tien-len')
 
-#%%
+
 orig_init = DMCAgent.__init__
 def new_init(self, *args, **kwargs):
     orig_init(self, *args, **kwargs)
     self.use_raw = True
 DMCAgent.__init__ = new_init
 
-#%%
+
 # Agents
 class TrainedAgent:
     def __init__(self, model):
@@ -195,6 +194,7 @@ class TienLenRandomAgent:
     """
     def __init__(self):
         self.use_raw = True
+        pass
 
     def step(self, state):
         """
@@ -213,8 +213,6 @@ class TienLenRandomAgent:
     def eval_step(self, state):
         return self.step(state), {}
 
-
-#%%
 def train():
     env = rlcard.make('tien-len')
     trainer = DMCTrainer(
@@ -229,7 +227,7 @@ def train():
 def load_model():
     env = rlcard.make('tien-len')
 
-    model = DMCModel(env.state_shape, 52)
+    model = DMCModel(env.state_shape, [52])
     checkpoint = torch.load('models/rl-tien-len/model.tar', map_location='cpu')
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval() # Set to evaluation mode
@@ -266,11 +264,11 @@ def play_test_game(trained_agent):
     print("--- Game Over ---")
     print(f"Final Payoffs: {env.get_payoffs()}")
 
-#%%
+
 if not os.path.exists('models'): os.makedirs('models')
 train()
 agent = load_model()
-#%%
+
 evaluate(agent)
-#%%
+
 play_test_game(agent)
