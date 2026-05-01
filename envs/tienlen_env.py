@@ -67,7 +67,7 @@ class TienLenEnv(Env):
         return self._extract_state(next_state), player_id
 
     def get_payoffs(self):
-        payoffs = self.game.initial_payoffs
+        payoffs = list(self.game.initial_payoffs)
         for idx, p in enumerate(self.game.players):
             if p.hand and any(card[0] == 15 for card in p.hand):
                 payoffs[idx] -= 0.5
