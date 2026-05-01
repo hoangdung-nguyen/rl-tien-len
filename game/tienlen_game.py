@@ -40,7 +40,7 @@ class TienLenGame:
     def step(self, action_cards):
         """ Logic to process an agent's move and update the game state. """
         player = self.players[self.current_player]
-        if action_cards is ():
+        if action_cards == ():
             self.players_in_play[self.current_player] = False
         else:
             self.state, _ = self.judger.get_type(action_cards)
@@ -132,7 +132,8 @@ class TienLenGame:
 
     def is_over(self):
         """Check if every player has run out of cards."""
-        return any(len(p.hand) == 0 for p in self.players)
+        # return any(len(p.hand) == 0 for p in self.players)
+        return sum(self.players_in_game) < 2
 
     def get_player_id(self):
         """ Return the current player's ID (0, 1, 2, or 3) """

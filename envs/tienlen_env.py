@@ -69,7 +69,7 @@ class TienLenEnv(Env):
             'raw_legal_actions': legal_actions
         }
 
-    def step(self, action):
+    def step(self, action, raw_action=False):
         next_state, player_id = self.game.step(action)
         return self._extract_state(next_state), player_id
 
