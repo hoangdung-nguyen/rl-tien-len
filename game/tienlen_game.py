@@ -40,8 +40,7 @@ class TienLenGame:
     def step(self, action_cards):
         """ Logic to process an agent's move and update the game state. """
         player = self.players[self.current_player]
-
-        if action_cards is None: # This is a "Pass" (ID 0)
+        if action_cards is ():
             self.players_in_play[self.current_player] = False
         else:
             self.state, _ = self.judger.get_type(action_cards)
@@ -79,7 +78,6 @@ class TienLenGame:
 
         while not self.players_in_play[self.current_player]:
             self.current_player = (self.current_player + 1) % self.num_players
-
 
         return self.get_state(self.current_player), self.current_player
 

@@ -134,7 +134,6 @@ class TienLenJudger:
         return valid
 
     def _get_runs(self, hand, peek=None):
-        """ Find sequences where length >= peek length """
         target_len = len(peek) if peek else 3
         peek_power = peek[-1] if peek else (0, 0)
         valid, groups = [], self._get_rank_groups(hand)
@@ -147,7 +146,7 @@ class TienLenJudger:
                 if all(subset[j] == subset[0] + j for j in range(length)):
                     # Get card variations for this rank sequence
                     for combo in itertools.product(*[groups[r] for r in subset]):
-                        if length > target_len or combo[-1] > peek_power:
+                        if length == target_len and combo[-1] > peek_power:
                             valid.append(list(combo))
         return valid
 
